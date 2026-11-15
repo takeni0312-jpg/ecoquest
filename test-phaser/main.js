@@ -33,7 +33,8 @@ const CFG = {
   recoilTime: 90,
   hpDrop: 1500,         // la jauge du Kraken descend en …
   hpAfter: 0.42,       // … jusqu'à 42 % de vie
-  redFlash: 520,       // la jauge rouge s'efface en …
+  redHold: 180,        // la jauge reste rouge encore … après avoir fini de baisser
+  redToGreen: 350,     // puis elle repasse au vert en …
   waveFadeOut: 260,
   captainReturn: 320,  // le capitaine revient à sa place
   endHold: 700,        // pause avant de pouvoir rejouer
@@ -99,7 +100,7 @@ class Combat extends Phaser.Scene {
     this.krakenSprite.setTexture('kraken').setPosition(CFG.kraken.x, CFG.kraken.y).clearTint();
     this.captain.x = CFG.captain.x;
     this.hp.enemy = 1; this.setBar(this.enemyBar, 'droite', 1);
-    this.enemyRed.setAlpha(0);
+    this.enemyRed.setAlpha(0); this.setBar(this.enemyRed, 'droite', 1);
     this.wave.setVisible(false); this.ring.setVisible(false);
   }
 
@@ -137,13 +138,20 @@ class Combat extends Phaser.Scene {
     this.cameras.main.shake(CFG.shake, CFG.shakePower);            // secousse d'écran
     this.tweens.add({ targets: this.krakenSprite, x: CFG.krakenHit.x + CFG.recoil,
                       duration: CFG.recoilTime, yoyo: true, ease: 'Quad.easeOut' });
-    this.enemyRed.setAlpha(1);                                     // la jauge flashe en rouge…
-    this.tweens.add({ targets: this.enemyRed, alpha: 0, duration: CFG.redFlash });
-    this.tweens.add({ targets: this.hp, enemy: CFG.hpAfter, duration: CFG.hpDrop,   // …et baisse
-                      ease: 'Cubic.easeOut', onUpdate: () => this.setBar(this.enemyBar, 'droite', this.hp.enemy) });
+    this.enemyRed.setAlpha(1);                                     // la jauge passe en rouge…
     this.tweens.add({ targets: this.wave, alpha: 0, duration: CFG.waveFadeOut });
+    // … et reste rouge pendant qu'elle baisse (la version rouge est rognée comme la verte)
+    await this.anim({ targets: this.hp, enemy: CFG.hpAfter, duration: CFG.hpDrop, ease: 'Cubic.easeOut',
+                      onUpdate: () => {
+                        this.setBar(this.enemyBar, 'droite', this.hp.enemy);
+                        this.setBar(this.enemyRed, 'droite', this.hp.enemy);
+                      } });
 
-    // 4. Pause avant de pouvoir rejouer
+    // 4. La jauge s'est arrêtée : courte pause, puis elle repasse au vert
+    await this.attendre(CFG.redHold);
+    await this.anim({ targets: this.enemyRed, alpha: 0, duration: CFG.redToGreen });
+
+    // 5. Pause avant de pouvoir rejouer
     await this.attendre(CFG.endHold);
     this.busy = false;
   }
