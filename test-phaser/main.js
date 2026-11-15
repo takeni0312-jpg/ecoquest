@@ -182,6 +182,7 @@ class Combat extends Phaser.Scene {
                       } });
 
     // 4. La jauge s'est arrêtée : l'étincelle s'éteint ET la jauge repasse au vert EN MÊME TEMPS
+    this.krakenSprite.setTexture('kraken').setPosition(CFG.kraken.x, CFG.kraken.y);   // le Kraken reprend son état initial
     this.tweens.add({ targets: this.spark, alpha: 0, duration: CFG.redToGreen });
     await this.anim({ targets: this.enemyRed, alpha: 0, duration: CFG.redToGreen });
 
