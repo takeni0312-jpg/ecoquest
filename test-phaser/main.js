@@ -41,7 +41,7 @@ const CFG = {
   hpAfter: 0.42,       // … jusqu'à 42 % de vie
   redIn: 90,           // la jauge passe au rouge en …
   redHold: 180,        // la jauge reste rouge encore … après avoir fini de baisser
-  redToGreen: 90,     // puis elle repasse au vert en …
+  redToGreen: 350,     // puis elle repasse au vert en …
   waveFadeOut: 50,
   captainReturn: 320,  // le capitaine revient à sa place
   endHold: 700,        // pause avant de pouvoir rejouer
@@ -181,9 +181,8 @@ class Combat extends Phaser.Scene {
                         this.spark.setScale(Phaser.Math.FloatBetween(0.9, 1.5));   // scintillement
                       } });
 
-    // 4. La jauge s'est arrêtée : l'étincelle s'éteint, courte pause, puis la jauge repasse au vert
-    this.tweens.add({ targets: this.spark, alpha: 0, duration: CFG.redHold });
-    await this.attendre(CFG.redHold);
+    // 4. La jauge s'est arrêtée : l'étincelle s'éteint ET la jauge repasse au vert EN MÊME TEMPS
+    this.tweens.add({ targets: this.spark, alpha: 0, duration: CFG.redToGreen });
     await this.anim({ targets: this.enemyRed, alpha: 0, duration: CFG.redToGreen });
 
     // 5. Pause avant de pouvoir rejouer
