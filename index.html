@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>EcoQuest — démo jouable : le Kraken</title>
+  <meta name="description" content="Démo jouable d'EcoQuest : affrontez le Kraken Pollueur.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <div class="stage" id="stage">
+      <img class="layer" id="layerA" alt="" draggable="false">
+      <img class="layer" id="layerB" alt="" draggable="false" aria-hidden="true">
+      <div class="ui" id="ui"></div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="end" id="end" hidden>
+        <div class="panel" role="dialog" aria-labelledby="endTitle">
+          <h1 id="endTitle">Fin de la démo</h1>
+          <p>Merci d'avoir joué la séquence du Kraken.</p>
+          <button type="button" id="replay">Rejouer</button>
+        </div>
+      </div>
+      <div class="loading" id="loading" role="status">Chargement…</div>
+    </div>
+    <p class="hint" id="hint" aria-live="polite"></p>
+    <p class="foot">EcoQuest · démo du Kraken · <button type="button" id="restart" class="link">Recommencer</button></p>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
