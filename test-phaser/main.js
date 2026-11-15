@@ -41,8 +41,8 @@ const CFG = {
   hpAfter: 0.42,       // … jusqu'à 42 % de vie
   redIn: 90,           // la jauge passe au rouge en …
   redHold: 180,        // la jauge reste rouge encore … après avoir fini de baisser
-  redToGreen: 0,     // puis elle repasse au vert en …
-  waveFadeOut: 260,
+  redToGreen: 50,     // puis elle repasse au vert en …
+  waveFadeOut: 50,
   captainReturn: 320,  // le capitaine revient à sa place
   endHold: 700,        // pause avant de pouvoir rejouer
 };
