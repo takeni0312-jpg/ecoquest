@@ -41,7 +41,7 @@ const CFG = {
   hpAfter: 0.42,       // … jusqu'à 42 % de vie
   redIn: 90,           // la jauge passe au rouge en …
   redHold: 180,        // la jauge reste rouge encore … après avoir fini de baisser
-  redToGreen: 350,     // puis elle repasse au vert en …
+  redToGreen: 90,      // puis elle repasse au vert en …
   waveFadeOut: 50,
   captainReturn: 320,  // le capitaine revient à sa place
   endHold: 700,        // pause avant de pouvoir rejouer
@@ -54,7 +54,7 @@ class Combat extends Phaser.Scene {
   // Étape A : charger les images
   preload() {
     ['bg', 'captain', 'kraken', 'kraken_hit', 'wave1', 'wave2',
-     'bar_player', 'bar_enemy', 'bar_enemy_red_clean']
+     'bar_player', 'bar_enemy', 'bar_enemy_empty', 'bar_enemy_red_clean']
       .forEach((nom) => this.load.image(nom, `assets/${nom}.png`));
   }
 
@@ -84,7 +84,7 @@ class Combat extends Phaser.Scene {
     // que l'on rogne (« crop ») pour la faire baisser.
     this.add.image(CFG.playerBar.x, CFG.playerBar.y, 'bar_player').setOrigin(0).setTint(0x2a0c0c);
     this.playerBar = this.add.image(CFG.playerBar.x, CFG.playerBar.y, 'bar_player').setOrigin(0);
-    this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy').setOrigin(0).setTint(0x2a0c0c);
+    this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy_empty').setOrigin(0);   // barre vide (cadre + fond), sans teinte
     this.enemyBar = this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy').setOrigin(0);
     this.enemyRed = this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy_red_clean').setOrigin(0).setAlpha(0);
     this.spark = this.add.image(0, 0, 'spark').setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
