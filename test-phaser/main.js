@@ -167,11 +167,12 @@ class Combat extends Phaser.Scene {
     this.cameras.main.shake(CFG.shake, CFG.shakePower);            // secousse d'écran
     this.tweens.add({ targets: this.krakenSprite, x: CFG.krakenHit.x + CFG.recoil,
                       duration: CFG.recoilTime, yoyo: true, ease: 'Quad.easeOut' });
-    this.tweens.add({ targets: this.enemyRed, alpha: 1, duration: CFG.redIn });   // la jauge passe en rouge…
     this.tweens.add({ targets: this.wave, alpha: 0, duration: CFG.waveFadeOut });
-    // … l'étincelle apparaît au bord de la jauge, et la suit pendant qu'elle baisse
+    // Temps 2 : la jauge passe au rouge À 100 %, avec l'étincelle au bord (le Kraken vient d'être touché)
     this.spark.setVisible(true).setAlpha(1)
               .setPosition(this.bordJaugeKraken(1), CFG.enemyBar.y + 24);
+    await this.anim({ targets: this.enemyRed, alpha: 1, duration: CFG.redIn });
+    // Temps 3 : seulement ensuite, la jauge rouge baisse et l'étincelle la suit
     await this.anim({ targets: this.hp, enemy: CFG.hpAfter, duration: CFG.hpDrop, ease: 'Cubic.easeOut',
                       onUpdate: () => {
                         this.setBar(this.enemyBar, 'droite', this.hp.enemy);
