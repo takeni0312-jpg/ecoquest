@@ -25,7 +25,7 @@ const CFG = {
   lunge: 160,          // le capitaine s'élance vers l'avant
   lungeDist: 38,       // … de combien (px)
   waveFadeIn: 120,     // la vague apparaît
-  waveTravel: 250,     // la vague voyage jusqu'au Kraken
+  waveTravel: 150,     // la vague voyage jusqu'au Kraken
   hitStop: 70,         // micro-pause à l'impact (donne du poids au coup)
   shake: 180,          // durée de la secousse d'écran
   shakePower: 0.006,   // force de la secousse
