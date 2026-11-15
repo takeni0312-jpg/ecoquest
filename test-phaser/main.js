@@ -21,6 +21,12 @@ const CFG = {
   waveStart: { x: 400, y: 411 },     // centre de la vague au départ (près du trident)
   waveEnd:   { x: 673, y: 295 },     // centre de la vague à l'impact (sur le Kraken)
 
+  // Où commence et où finit la partie COLORÉE de chaque jauge, dans son image (en px).
+  // L'image contient aussi l'icône et les pointes : 100 % de vie = toute la partie colorée,
+  // pas toute l'image. (Mesuré sur les images.)
+  playerFill: { debut: 47, fin: 207 },
+  enemyFill:  { debut: 31, fin: 192 },
+
   // Chronologie (ms)
   lunge: 160,          // le capitaine s'élance vers l'avant
   lungeDist: 38,       // … de combien (px)
@@ -33,6 +39,7 @@ const CFG = {
   recoilTime: 90,
   hpDrop: 1500,         // la jauge du Kraken descend en …
   hpAfter: 0.42,       // … jusqu'à 42 % de vie
+  redIn: 90,           // la jauge passe au rouge en …
   redHold: 180,        // la jauge reste rouge encore … après avoir fini de baisser
   redToGreen: 350,     // puis elle repasse au vert en …
   waveFadeOut: 260,
@@ -47,7 +54,7 @@ class Combat extends Phaser.Scene {
   // Étape A : charger les images
   preload() {
     ['bg', 'captain', 'kraken', 'kraken_hit', 'wave1', 'wave2',
-     'bar_player', 'bar_enemy', 'bar_enemy_red']
+     'bar_player', 'bar_enemy', 'bar_enemy_red_clean']
       .forEach((nom) => this.load.image(nom, `assets/${nom}.png`));
   }
 
@@ -57,6 +64,17 @@ class Combat extends Phaser.Scene {
     const g = this.make.graphics({ x: 0, y: 0, add: false });
     g.lineStyle(7, 0xdff3ff, 1); g.strokeCircle(64, 64, 56);
     g.generateTexture('ring', 128, 128); g.destroy();
+
+    // Une étincelle (halo lumineux) dessinée par le code : elle suivra le bord de la jauge
+    const tex = this.textures.createCanvas('spark', 96, 96);
+    const ctx = tex.getContext();
+    const halo = ctx.createRadialGradient(48, 48, 0, 48, 48, 48);
+    halo.addColorStop(0, 'rgba(255,255,255,1)');
+    halo.addColorStop(0.18, 'rgba(255,225,120,0.95)');
+    halo.addColorStop(0.5, 'rgba(255,110,20,0.45)');
+    halo.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.fillStyle = halo; ctx.fillRect(0, 0, 96, 96);
+    tex.refresh();
 
     this.add.image(0, 0, 'bg').setOrigin(0);
     this.krakenSprite = this.add.image(CFG.kraken.x, CFG.kraken.y, 'kraken').setOrigin(0);
@@ -68,7 +86,8 @@ class Combat extends Phaser.Scene {
     this.playerBar = this.add.image(CFG.playerBar.x, CFG.playerBar.y, 'bar_player').setOrigin(0);
     this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy').setOrigin(0).setTint(0x2a0c0c);
     this.enemyBar = this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy').setOrigin(0);
-    this.enemyRed = this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy_red').setOrigin(0).setAlpha(0);
+    this.enemyRed = this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy_red_clean').setOrigin(0).setAlpha(0);
+    this.spark = this.add.image(0, 0, 'spark').setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
 
     this.wave = this.add.image(0, 0, 'wave1').setVisible(false);   // origine au centre
     this.ring = this.add.image(0, 0, 'ring').setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
@@ -86,13 +105,22 @@ class Combat extends Phaser.Scene {
     this.input.keyboard.on('keydown-SPACE', () => this.jouer());
   }
 
-  // Fait baisser une jauge : on n'affiche que la part « ratio » de l'image.
+  // Fait baisser une jauge : on n'affiche que la part « ratio » de la partie colorée.
   // 'gauche' = l'icône est à gauche (capitaine) ; 'droite' = l'icône est à droite (Kraken).
+  // Le ratio s'applique à la partie colorée (voir CFG.playerFill / enemyFill), pas à toute l'image.
   setBar(image, cote, ratio) {
-    const r = Math.max(0.02, Math.min(1, ratio));
-    const w = image.width, h = image.height;
-    if (cote === 'gauche') image.setCrop(0, 0, w * r, h);
-    else image.setCrop(w * (1 - r), 0, w * r, h);
+    const r = Math.max(0, Math.min(1, ratio));
+    if (r >= 1) { image.setCrop(); return; }                       // 100 % : aucun rognage
+    const f = cote === 'gauche' ? CFG.playerFill : CFG.enemyFill;
+    const part = (f.fin - f.debut) * r;
+    if (cote === 'gauche') image.setCrop(0, 0, f.debut + part, image.height);
+    else image.setCrop(f.fin - part, 0, image.width - (f.fin - part), image.height);
+  }
+
+  // Position (en px à l'écran) du bord mobile de la jauge du Kraken : là où l'étincelle doit se placer
+  bordJaugeKraken(ratio) {
+    const f = CFG.enemyFill;
+    return CFG.enemyBar.x + f.fin - (f.fin - f.debut) * Math.max(0, Math.min(1, ratio));
   }
 
   // Remet tout en place avant de rejouer
@@ -101,6 +129,7 @@ class Combat extends Phaser.Scene {
     this.captain.x = CFG.captain.x;
     this.hp.enemy = 1; this.setBar(this.enemyBar, 'droite', 1);
     this.enemyRed.setAlpha(0); this.setBar(this.enemyRed, 'droite', 1);
+    this.spark.setVisible(false);
     this.wave.setVisible(false); this.ring.setVisible(false);
   }
 
@@ -138,16 +167,21 @@ class Combat extends Phaser.Scene {
     this.cameras.main.shake(CFG.shake, CFG.shakePower);            // secousse d'écran
     this.tweens.add({ targets: this.krakenSprite, x: CFG.krakenHit.x + CFG.recoil,
                       duration: CFG.recoilTime, yoyo: true, ease: 'Quad.easeOut' });
-    this.enemyRed.setAlpha(1);                                     // la jauge passe en rouge…
+    this.tweens.add({ targets: this.enemyRed, alpha: 1, duration: CFG.redIn });   // la jauge passe en rouge…
     this.tweens.add({ targets: this.wave, alpha: 0, duration: CFG.waveFadeOut });
-    // … et reste rouge pendant qu'elle baisse (la version rouge est rognée comme la verte)
+    // … l'étincelle apparaît au bord de la jauge, et la suit pendant qu'elle baisse
+    this.spark.setVisible(true).setAlpha(1)
+              .setPosition(this.bordJaugeKraken(1), CFG.enemyBar.y + 24);
     await this.anim({ targets: this.hp, enemy: CFG.hpAfter, duration: CFG.hpDrop, ease: 'Cubic.easeOut',
                       onUpdate: () => {
                         this.setBar(this.enemyBar, 'droite', this.hp.enemy);
                         this.setBar(this.enemyRed, 'droite', this.hp.enemy);
+                        this.spark.x = this.bordJaugeKraken(this.hp.enemy);
+                        this.spark.setScale(Phaser.Math.FloatBetween(0.9, 1.5));   // scintillement
                       } });
 
-    // 4. La jauge s'est arrêtée : courte pause, puis elle repasse au vert
+    // 4. La jauge s'est arrêtée : l'étincelle s'éteint, courte pause, puis la jauge repasse au vert
+    this.tweens.add({ targets: this.spark, alpha: 0, duration: CFG.redHold });
     await this.attendre(CFG.redHold);
     await this.anim({ targets: this.enemyRed, alpha: 0, duration: CFG.redToGreen });
 
