@@ -42,7 +42,7 @@ const CFG = {
   redIn: 90,           // la jauge passe au rouge en …
   redHold: 180,        // la jauge reste rouge encore … après avoir fini de baisser
   redToGreen: 350,     // puis elle repasse au vert en …
-  waveFadeOut: 260,
+  waveFadeOut: 50,
   captainReturn: 320,  // le capitaine revient à sa place
   endHold: 700,        // pause avant de pouvoir rejouer
 };
