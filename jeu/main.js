@@ -18,8 +18,8 @@ const CFG = {
 
   // --- Texte « machine à écrire » (rythme relevé sur ta vidéo : environ 26 lettres / seconde) ---
   lettre: 38,               // une lettre toutes les … ms
-  taillePolice: 12,         // taille des lettres, en px (c'est LE réglage à changer pour lire plus gros ou plus petit)
-  caracteresParLigne: 32,   // largeur d'une ligne = 391 px ÷ taillePolice (si tu changes la taille, change ce nombre)
+  taillePolice: 10,         // taille des lettres, en px (c'est LE réglage à changer pour lire plus gros ou plus petit)
+  caracteresParLigne: 39,   // largeur d'une ligne = 391 px ÷ taillePolice (si tu changes la taille, change ce nombre)
   interligne: 22,           // hauteur d'une ligne en px
   lignesParPage: 6,         // au-delà, le texte passe automatiquement à la page suivante (clic)
 
