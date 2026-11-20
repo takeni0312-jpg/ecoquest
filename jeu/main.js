@@ -94,6 +94,11 @@ const TEXTE_CAPITAINE = [
   "Ici le Capitaine Léviathan.\n\nAbyssalia meurt. L'acide ronge nos dernières amarres. Il faut fuir vers Azur. Mais la Fosse grouille de monstres. Je ne survivrai pas seul dans le noir. J'ai besoin de vous à la barre.\nMagie, Acier ou Ruse... C'est vous qui prendrez les décisions. Et chaque choix aura un prix.\n\nSi nous échouons, l'océan est perdu. Prêt à plonger avec moi ?",
 ];
 
+// Écran de victoire (texte de ton Figma, maintenant écrit lettre par lettre)
+const TEXTE_VICTOIRE = [
+  "FÉLICITATIONS ! Vous avez vaincu le KRAKEN POLLUEUR !\n\nVous obtenez une TENTACULE RUGUEUSE.\nVous obtenez +36 xp.",
+];
+
 // Le Kraken apparaît (texte de ton Figma, écran « Apparition du Kraken »)
 const TEXTE_KRAKEN = [
   "CAPITAINE LEVIATHAN :\nPar toutes les reliques... C'est le Kraken Pollueur. Ses tentacules suintent de Sang Noir.\n\nOn ne peut pas reculer. Acier, Magie ou Ruse ? Donnez vos ordres, et vite !",
@@ -138,8 +143,9 @@ function aller(scene, nom, data) {
 // La boîte de dialogue : affiche des pages de texte lettre par lettre.
 // Un clic (ou Espace / Entrée) : termine la page en cours ; un autre clic : page suivante.
 class Dialogue {
-  constructor(scene, { texteX, texteY, flecheX, flecheY }) {
+  constructor(scene, { texteX, texteY, flecheX, flecheY, chars }) {
     this.s = scene; this.x = texteX; this.y = texteY;
+    this.chars = chars || CFG.caracteresParLigne;
     flecheY -= 8;   // la flèche dorée est plus haute que l'ancienne : on la recentre
     this.fleche = scene.add.image(flecheX, flecheY, 'arrow').setOrigin(0).setVisible(false).setDepth(30);
     scene.tweens.add({ targets: this.fleche, y: flecheY + 3, duration: 450, yoyo: true, repeat: -1 });
@@ -151,7 +157,7 @@ class Dialogue {
   // Retourne une promesse : terminée quand le joueur a lu toute la dernière page
   jouer(textes) {
     // chaque texte est découpé en lignes, puis en pages de lignesParPage lignes
-    const pages = textes.flatMap((t) => paginer(decouper(t, CFG.caracteresParLigne), CFG.lignesParPage));
+    const pages = textes.flatMap((t) => paginer(decouper(t, this.chars), CFG.lignesParPage));
     return new Promise((fini) => {
       let n = 0, total = 0, vus = 0, timer = null, ecriture = false;
       const montrer = () => {
@@ -201,7 +207,7 @@ class Chargement extends Phaser.Scene {
       'btn_magie', 'btn_objets', 'btn_attaquer', 'btn_fuir',
       'bg', 'captain', 'captain_hurt', 'kraken', 'kraken_hit', 'kraken_ko', 'wave1', 'wave2', 'ball',
       'barre_joueur_vert', 'barre_joueur_rouge', 'barre_joueur_vide', 'barre_ennemi_vert', 'barre_ennemi_rouge', 'barre_ennemi_vide', 'etincelle',
-      'dialogue_victoire',
+      'dialogue_victoire_vide',
     ].forEach((nom) => this.load.image(nom, `assets/${nom}.png`));
   }
   create() {
@@ -325,7 +331,7 @@ class Combat extends Phaser.Scene {
     this.setBar(this.playerBar, 'gauche', 1); this.setBar(this.enemyBar, 'droite', 1);
 
     this.creerMenu();
-    this.boite = this.add.image(CFG.boiteVictoire.x, CFG.boiteVictoire.y, 'dialogue_victoire')
+    this.boite = this.add.image(CFG.boiteVictoire.x, CFG.boiteVictoire.y, 'dialogue_victoire_vide')
       .setOrigin(0).setVisible(false).setAlpha(0).setDepth(25);
     this.deroule();
   }
@@ -413,7 +419,6 @@ class Combat extends Phaser.Scene {
 
     // Écran 17 : victoire
     await this.victoire();
-    await new Promise((ok) => { const f = () => { this.input.off('pointerdown', f); ok(); }; this.input.once('pointerdown', f); });
     aller(this, 'Titre');                                       // fin de la version 1 : retour au titre
   }
 
@@ -489,6 +494,9 @@ class Combat extends Phaser.Scene {
     await attendre(this, 250);
     this.boite.setVisible(true);
     await anim(this, { targets: this.boite, alpha: 1, duration: 400 });
+    // le texte s'écrit lettre par lettre ; le dernier clic ferme la victoire
+    const dialogue = new Dialogue(this, { texteX: CFG.boiteVictoire.x + 55, texteY: CFG.boiteVictoire.y + 58, flecheX: CFG.boiteVictoire.x + 395, flecheY: CFG.boiteVictoire.y + 165 });
+    await dialogue.jouer(TEXTE_VICTOIRE);
   }
 }
 
