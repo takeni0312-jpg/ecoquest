@@ -57,8 +57,10 @@ const CFG = {
   playerHpAfter: 0.62, // jauge du capitaine après le coup du Kraken
   hurtRecoil: 18,      // le capitaine recule de … px quand il est touché
   // --- Victoire ---
-  koSink: 110,         // le Kraken vaincu s'affaisse de … px
-  koTime: 900,         // … en …
+  kraken_ko: { x: 461, y: 310 },     // Kraken vaincu (autre image, plus basse)
+  boite: { x: 267, y: 471 },         // boîte de dialogue de victoire
+  koDrop: 70,          // le Kraken vaincu tombe de … px avant de se poser
+  koTime: 420,         // … en …
 };
 
 /* -------------------------------- 2. LA SCÈNE ------------------------------ */
@@ -68,7 +70,7 @@ class Combat extends Phaser.Scene {
   // Étape A : charger les images
   preload() {
     ['bg', 'captain', 'kraken', 'kraken_hit', 'wave1', 'wave2',
-     'captain_hurt', 'ball',
+     'captain_hurt', 'ball', 'kraken_ko', 'dialogue_victoire',
      'bar_player', 'bar_player_empty', 'bar_player_red',
      'bar_enemy', 'bar_enemy_empty', 'bar_enemy_red_clean']
       .forEach((nom) => this.load.image(nom, `assets/${nom}.png`));
@@ -149,17 +151,9 @@ class Combat extends Phaser.Scene {
     return CFG.playerBar.x + f.debut + (f.fin - f.debut) * Math.max(0, Math.min(1, ratio));
   }
 
-  // La boîte de dialogue de victoire, dessinée par le code (en attendant ton image Figma)
+  // La boîte de dialogue de victoire (ton image Figma, texte compris)
   creerBoiteVictoire() {
-    const x = 283, y = 502, w = 452, h = 182;
-    const fond = this.add.graphics();
-    fond.fillStyle(0x05070d, 0.96).fillRect(x, y, w, h);
-    fond.lineStyle(4, 0xc9d3dd, 1).strokeRect(x, y, w, h);
-    fond.lineStyle(2, 0x6f8fb0, 1).strokeRect(x + 6, y + 6, w - 12, h - 12);
-    const texte = this.add.text(x + 52, y + 46,
-      'FÉLICITATIONS ! Vous avez vaincu le\nKRAKEN POLLUEUR !\n\nVous obtenez une TENTACULE RUGUEUSE.\nVous obtenez +36 xp.',
-      { fontFamily: 'monospace', fontSize: '15px', color: '#ffffff', lineSpacing: 6 });
-    this.boite = this.add.container(0, 0, [fond, texte]).setVisible(false).setAlpha(0);
+    this.boite = this.add.image(CFG.boite.x, CFG.boite.y, 'dialogue_victoire').setOrigin(0).setVisible(false).setAlpha(0);
   }
 
   // Remet tout en place avant de rejouer
@@ -293,12 +287,11 @@ class Combat extends Phaser.Scene {
     await this.anim({ targets: this.playerRed, alpha: 0, duration: CFG.redToGreen });
   }
 
-  // ÉTAPE 3 — Victoire : le Kraken s'affaisse, la boîte de dialogue apparaît.
-  // (Son image « vaincu » n'existe pas encore : en attendant, on affaisse l'image « touché ».)
+  // ÉTAPE 3 — Victoire : le Kraken vaincu s'affaisse (image Figma), puis la boîte de dialogue apparaît
   async victoire() {
-    this.krakenSprite.setTexture('kraken_hit').setPosition(CFG.krakenHit.x, CFG.krakenHit.y);
-    this.tweens.add({ targets: this.krakenSprite, y: CFG.krakenHit.y + CFG.koSink, duration: CFG.koTime, ease: 'Cubic.easeOut' });
-    await this.attendre(CFG.koTime * 0.5);
+    this.krakenSprite.setTexture('kraken_ko').setPosition(CFG.kraken_ko.x, CFG.kraken_ko.y - CFG.koDrop);
+    await this.anim({ targets: this.krakenSprite, y: CFG.kraken_ko.y, duration: CFG.koTime, ease: 'Bounce.easeOut' });
+    await this.attendre(250);
     this.boite.setVisible(true);
     await this.anim({ targets: this.boite, alpha: 1, duration: 400 });
   }
