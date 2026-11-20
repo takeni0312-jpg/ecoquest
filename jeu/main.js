@@ -18,8 +18,10 @@ const CFG = {
 
   // --- Texte « machine à écrire » (rythme relevé sur ta vidéo : environ 26 lettres / seconde) ---
   lettre: 38,               // une lettre toutes les … ms
-  caracteresParLigne: 48,   // largeur d'une ligne (391 px / 8 px par lettre, comme dans ton Figma)
-  interligne: 16,           // hauteur d'une ligne (police 8 px × interligne 2 dans ton Figma)
+  taillePolice: 12,         // taille des lettres, en px (c'est LE réglage à changer pour lire plus gros ou plus petit)
+  caracteresParLigne: 32,   // largeur d'une ligne = 391 px ÷ taillePolice (si tu changes la taille, change ce nombre)
+  interligne: 22,           // hauteur d'une ligne en px
+  lignesParPage: 6,         // au-delà, le texte passe automatiquement à la page suivante (clic)
 
   // --- Intro ---
   introFondSeul: 1300,      // le décor reste seul avant l'apparition du parchemin
@@ -45,8 +47,12 @@ const CFG = {
   ballMid:   { x: 571, y: 398 },
   ballEnd:   { x: 384, y: 438 },
   boiteVictoire: { x: 267, y: 471 },
-  playerFill: { debut: 47, fin: 207 },   // partie colorée de chaque jauge, dans son image
-  enemyFill:  { debut: 31, fin: 192 },
+  // Les jauges viennent de ton Figma (frame « lifebar »), en 724 px de large : on les affiche à 240 px (échelle 0,33)
+  barreEchelle: 240 / 724,
+  playerFill: { debut: 123, fin: 672 },  // partie colorée de la jauge du joueur, en pixels de l'image d'origine (724 px)
+  enemyFill:  { debut: 52,  fin: 601 },  // idem pour le Kraken (image inversée : le bouclier est à droite)
+  barreMilieuY: 24,                      // hauteur du centre de la jauge (là où se pose l'étincelle)
+  etincelleEchelle: 0.33,                // taille de base de l'étincelle
 
   // --- Combat : menu des 4 boutons (position de chaque bouton, repère 1085 × 723) ---
   menu: {
@@ -94,7 +100,7 @@ const TEXTE_KRAKEN = [
 ];
 
 /* -------------------------------- 3. OUTILS -------------------------------- */
-const POLICE = { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#ffffff', resolution: 2 };
+const POLICE = { fontFamily: '"Press Start 2P", monospace', fontSize: CFG.taillePolice + 'px', color: '#ffffff', resolution: 2 };
 
 // Découpe un texte en lignes de 48 lettres maximum (retour à la ligne entre les mots)
 function decouper(texte, max) {
@@ -111,6 +117,18 @@ function decouper(texte, max) {
   return lignes;
 }
 
+// Coupe une liste de lignes en « pages » de CFG.lignesParPage lignes maximum
+function paginer(lignes, max) {
+  const pages = [];
+  for (let i = 0; i < lignes.length; i += max) {
+    const page = lignes.slice(i, i + max);
+    while (page.length && page[0] === '') page.shift();      // pas de ligne vide en haut d'une page
+    while (page.length && page[page.length - 1] === '') page.pop();
+    if (page.length) pages.push(page);
+  }
+  return pages;
+}
+
 // Fondu au noir vers une autre scène
 function aller(scene, nom, data) {
   scene.cameras.main.fadeOut(CFG.fondu, 0, 0, 0);
@@ -122,6 +140,7 @@ function aller(scene, nom, data) {
 class Dialogue {
   constructor(scene, { texteX, texteY, flecheX, flecheY }) {
     this.s = scene; this.x = texteX; this.y = texteY;
+    flecheY -= 8;   // la flèche dorée est plus haute que l'ancienne : on la recentre
     this.fleche = scene.add.image(flecheX, flecheY, 'arrow').setOrigin(0).setVisible(false).setDepth(30);
     scene.tweens.add({ targets: this.fleche, y: flecheY + 3, duration: 450, yoyo: true, repeat: -1 });
     this.lignes = [];
@@ -130,12 +149,14 @@ class Dialogue {
   nettoyer() { this.lignes.forEach((t) => t.destroy()); this.lignes = []; }
 
   // Retourne une promesse : terminée quand le joueur a lu toute la dernière page
-  jouer(pages) {
+  jouer(textes) {
+    // chaque texte est découpé en lignes, puis en pages de lignesParPage lignes
+    const pages = textes.flatMap((t) => paginer(decouper(t, CFG.caracteresParLigne), CFG.lignesParPage));
     return new Promise((fini) => {
       let n = 0, total = 0, vus = 0, timer = null, ecriture = false;
       const montrer = () => {
         this.nettoyer(); this.fleche.setVisible(false);
-        const lignes = decouper(pages[n], CFG.caracteresParLigne);
+        const lignes = pages[n];
         total = lignes.reduce((a, l) => a + l.length, 0); vus = 0; ecriture = true;
         this.lignes = lignes.map((l, i) =>
           this.s.add.text(this.x, this.y + i * CFG.interligne, '', POLICE).setDepth(30));
@@ -179,7 +200,7 @@ class Chargement extends Phaser.Scene {
       'title', 'bg_intro', 'box', 'scroll', 'arrow', 'bg_ruines', 'bg_capitaine', 'captain_big', 'swim', 'cursor',
       'btn_magie', 'btn_objets', 'btn_attaquer', 'btn_fuir',
       'bg', 'captain', 'captain_hurt', 'kraken', 'kraken_hit', 'kraken_ko', 'wave1', 'wave2', 'ball',
-      'bar_player', 'bar_player_empty', 'bar_player_red', 'bar_enemy', 'bar_enemy_empty', 'bar_enemy_red_clean',
+      'barre_joueur_vert', 'barre_joueur_rouge', 'barre_joueur_vide', 'barre_ennemi_vert', 'barre_ennemi_rouge', 'barre_ennemi_vide', 'etincelle',
       'dialogue_victoire',
     ].forEach((nom) => this.load.image(nom, `assets/${nom}.png`));
   }
@@ -278,11 +299,6 @@ class Combat extends Phaser.Scene {
     // Éléments dessinés par le code : l'anneau d'impact et l'étincelle des jauges
     const g = this.make.graphics({ x: 0, y: 0, add: false });
     g.lineStyle(7, 0xdff3ff, 1); g.strokeCircle(64, 64, 56); g.generateTexture('ring', 128, 128); g.destroy();
-    const tex = this.textures.createCanvas('spark', 96, 96); const ctx = tex.getContext();
-    const halo = ctx.createRadialGradient(48, 48, 0, 48, 48, 48);
-    halo.addColorStop(0, 'rgba(255,255,255,1)'); halo.addColorStop(0.18, 'rgba(255,225,120,0.95)');
-    halo.addColorStop(0.5, 'rgba(255,110,20,0.45)'); halo.addColorStop(1, 'rgba(255,60,0,0)');
-    ctx.fillStyle = halo; ctx.fillRect(0, 0, 96, 96); tex.refresh();
 
     // Décor et personnages (du fond vers l'avant)
     this.add.image(0, 0, 'bg').setOrigin(0);
@@ -291,13 +307,17 @@ class Combat extends Phaser.Scene {
     this.tweens.add({ targets: this.captain, y: CFG.captain.y - 4, duration: 1400, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
 
     // Jauges : le fond vide (avec cadre), la jauge verte (rognée pour baisser), la jauge rouge par-dessus
-    this.add.image(CFG.playerBar.x, CFG.playerBar.y, 'bar_player_empty').setOrigin(0);
-    this.playerBar = this.add.image(CFG.playerBar.x, CFG.playerBar.y, 'bar_player').setOrigin(0);
-    this.playerRed = this.add.image(CFG.playerBar.x, CFG.playerBar.y, 'bar_player_red').setOrigin(0).setAlpha(0);
-    this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy_empty').setOrigin(0);
-    this.enemyBar = this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy').setOrigin(0);
-    this.enemyRed = this.add.image(CFG.enemyBar.x, CFG.enemyBar.y, 'bar_enemy_red_clean').setOrigin(0).setAlpha(0);
-    this.spark = this.add.image(0, 0, 'spark').setVisible(false).setBlendMode(Phaser.BlendModes.ADD).setDepth(20);
+    const E = CFG.barreEchelle;
+    const barre = (cfg, nom, alpha = 1) => this.add.image(cfg.x, cfg.y, nom).setOrigin(0).setScale(E).setAlpha(alpha);
+    barre(CFG.playerBar, 'barre_joueur_vide');
+    this.playerBar = barre(CFG.playerBar, 'barre_joueur_vert');
+    this.playerRed = barre(CFG.playerBar, 'barre_joueur_rouge', 0);
+    barre(CFG.enemyBar, 'barre_ennemi_vide');
+    this.enemyBar = barre(CFG.enemyBar, 'barre_ennemi_vert');
+    this.enemyRed = barre(CFG.enemyBar, 'barre_ennemi_rouge', 0);
+    // L'étincelle (ton Figma) : son centre (point lumineux) est à (87, 102) dans l'image de 240 × 177
+    this.spark = this.add.image(0, 0, 'etincelle').setOrigin(87 / 240, 102 / 177).setScale(CFG.etincelleEchelle)
+      .setVisible(false).setBlendMode(Phaser.BlendModes.ADD).setDepth(20);
     this.wave = this.add.image(0, 0, 'wave1').setVisible(false).setDepth(15);
     this.ball = this.add.image(0, 0, 'ball').setVisible(false).setDepth(15);
     this.ring = this.add.image(0, 0, 'ring').setVisible(false).setBlendMode(Phaser.BlendModes.ADD).setDepth(16);
@@ -319,8 +339,8 @@ class Combat extends Phaser.Scene {
     if (cote === 'gauche') image.setCrop(0, 0, f.debut + part, image.height);
     else image.setCrop(f.fin - part, 0, image.width - (f.fin - part), image.height);
   }
-  bordJaugeKraken(r) { const f = CFG.enemyFill; return CFG.enemyBar.x + f.fin - (f.fin - f.debut) * Math.max(0, Math.min(1, r)); }
-  bordJaugeJoueur(r) { const f = CFG.playerFill; return CFG.playerBar.x + f.debut + (f.fin - f.debut) * Math.max(0, Math.min(1, r)); }
+  bordJaugeKraken(r) { const f = CFG.enemyFill; return CFG.enemyBar.x + (f.fin - (f.fin - f.debut) * Math.max(0, Math.min(1, r))) * CFG.barreEchelle; }
+  bordJaugeJoueur(r) { const f = CFG.playerFill; return CFG.playerBar.x + (f.debut + (f.fin - f.debut) * Math.max(0, Math.min(1, r))) * CFG.barreEchelle; }
 
   // ---- Menu : 4 boutons, curseur doré au survol. Seul « Attaquer » fonctionne pour l'instant ----
   creerMenu() {
@@ -418,11 +438,11 @@ class Combat extends Phaser.Scene {
 
     const depart = this.hp.enemy;                               // jauge rouge à son niveau actuel + étincelle au bord
     this.setBar(this.enemyRed, 'droite', depart);
-    this.spark.setVisible(true).setAlpha(1).setPosition(this.bordJaugeKraken(depart), CFG.enemyBar.y + 24);
+    this.spark.setVisible(true).setAlpha(1).setPosition(this.bordJaugeKraken(depart), CFG.enemyBar.y + CFG.barreMilieuY);
     await anim(this, { targets: this.enemyRed, alpha: 1, duration: CFG.redIn });
     await anim(this, { targets: this.hp, enemy: cibleVie, duration: CFG.hpDrop, ease: 'Cubic.easeOut', onUpdate: () => {
       this.setBar(this.enemyBar, 'droite', this.hp.enemy); this.setBar(this.enemyRed, 'droite', this.hp.enemy);
-      this.spark.x = this.bordJaugeKraken(this.hp.enemy); this.spark.setScale(Phaser.Math.FloatBetween(0.9, 1.5));
+      this.spark.x = this.bordJaugeKraken(this.hp.enemy); this.spark.setScale(CFG.etincelleEchelle * Phaser.Math.FloatBetween(0.9, 1.3));
     } });
 
     if (!final) this.krakenSprite.setTexture('kraken').setPosition(CFG.kraken.x, CFG.kraken.y);   // le Kraken reprend son état initial
@@ -450,11 +470,11 @@ class Combat extends Phaser.Scene {
 
     const depart = this.hp.player;
     this.setBar(this.playerRed, 'gauche', depart);
-    this.spark.setVisible(true).setAlpha(1).setPosition(this.bordJaugeJoueur(depart), CFG.playerBar.y + 24);
+    this.spark.setVisible(true).setAlpha(1).setPosition(this.bordJaugeJoueur(depart), CFG.playerBar.y + CFG.barreMilieuY);
     await anim(this, { targets: this.playerRed, alpha: 1, duration: CFG.redIn });
     await anim(this, { targets: this.hp, player: CFG.playerHpAfter, duration: CFG.hpDrop, ease: 'Cubic.easeOut', onUpdate: () => {
       this.setBar(this.playerBar, 'gauche', this.hp.player); this.setBar(this.playerRed, 'gauche', this.hp.player);
-      this.spark.x = this.bordJaugeJoueur(this.hp.player); this.spark.setScale(Phaser.Math.FloatBetween(0.9, 1.5));
+      this.spark.x = this.bordJaugeJoueur(this.hp.player); this.spark.setScale(CFG.etincelleEchelle * Phaser.Math.FloatBetween(0.9, 1.3));
     } });
 
     this.captain.setTexture('captain').setPosition(CFG.captain.x, CFG.captain.y);
