@@ -146,7 +146,6 @@ class Dialogue {
   constructor(scene, { texteX, texteY, flecheX, flecheY, chars }) {
     this.s = scene; this.x = texteX; this.y = texteY;
     this.chars = chars || CFG.caracteresParLigne;
-    flecheY -= 8;   // la flèche dorée est plus haute que l'ancienne : on la recentre
     this.fleche = scene.add.image(flecheX, flecheY, 'arrow').setOrigin(0).setVisible(false).setDepth(30);
     scene.tweens.add({ targets: this.fleche, y: flecheY + 3, duration: 450, yoyo: true, repeat: -1 });
     this.lignes = [];
