@@ -46,7 +46,7 @@ const CFG = {
   ballStart: { x: 690, y: 385 },
   ballMid:   { x: 571, y: 398 },
   ballEnd:   { x: 384, y: 438 },
-  boiteVictoire: { x: 267, y: 471 },
+  boiteVictoire: { x: 228, y: 417 },   // même boîte et même place que le dialogue du Kraken
   // Les jauges viennent de ton Figma (frame « lifebar »), en 724 px de large : on les affiche à 240 px (échelle 0,33)
   barreEchelle: 240 / 724,
   playerFill: { debut: 123, fin: 672 },  // partie colorée de la jauge du joueur, en pixels de l'image d'origine (724 px)
@@ -206,7 +206,6 @@ class Chargement extends Phaser.Scene {
       'btn_magie', 'btn_objets', 'btn_attaquer', 'btn_fuir',
       'bg', 'captain', 'captain_hurt', 'kraken', 'kraken_hit', 'kraken_ko', 'wave1', 'wave2', 'ball',
       'barre_joueur_vert', 'barre_joueur_rouge', 'barre_joueur_vide', 'barre_ennemi_vert', 'barre_ennemi_rouge', 'barre_ennemi_vide', 'etincelle',
-      'dialogue_victoire_vide',
     ].forEach((nom) => this.load.image(nom, `assets/${nom}.png`));
   }
   create() {
@@ -330,7 +329,7 @@ class Combat extends Phaser.Scene {
     this.setBar(this.playerBar, 'gauche', 1); this.setBar(this.enemyBar, 'droite', 1);
 
     this.creerMenu();
-    this.boite = this.add.image(CFG.boiteVictoire.x, CFG.boiteVictoire.y, 'dialogue_victoire_vide')
+    this.boite = this.add.image(CFG.boiteVictoire.x, CFG.boiteVictoire.y, 'box')
       .setOrigin(0).setVisible(false).setAlpha(0).setDepth(25);
     this.deroule();
   }
@@ -494,7 +493,7 @@ class Combat extends Phaser.Scene {
     this.boite.setVisible(true);
     await anim(this, { targets: this.boite, alpha: 1, duration: 400 });
     // le texte s'écrit lettre par lettre ; le dernier clic ferme la victoire
-    const dialogue = new Dialogue(this, { texteX: CFG.boiteVictoire.x + 55, texteY: CFG.boiteVictoire.y + 58, flecheX: CFG.boiteVictoire.x + 395, flecheY: CFG.boiteVictoire.y + 165 });
+    const dialogue = new Dialogue(this, { texteX: CFG.boiteVictoire.x + 119, texteY: CFG.boiteVictoire.y + 89, flecheX: CFG.boiteVictoire.x + 485, flecheY: CFG.boiteVictoire.y + 217 });
     await dialogue.jouer(TEXTE_VICTOIRE);
   }
 }
